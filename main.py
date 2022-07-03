@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 # создание  трехмерной сетки
 def create_3d_grid(x0,y0,t0,x_max,y_max,t_max,dx,dy,dt):
     x = np.arange(x0, x_max, dx)
@@ -20,14 +19,21 @@ def t_argmax_values(p_grid):
     for i in range(n):
         for j in range(m):
             q[i,j]=np.argmax(p_grid[i,j,:])
-    #создадим список gridpoint
+
+
+    return q
+
+def create_far_grid(m,n):
+    # создадим список gridpoint
     grid_types = []
     for j in range(n):
-        grid_types.append([0]*m)
+        grid_types.append([0] * m)
         for i in range(m):
-            grid_types[j][i]='far'
+            grid_types[j][i] = 'far'
+    return grid_types
 
-    return q,grid_types
+
+
 
 #процедура добавления точки с индексами коорлинат (i,j) to considered
 #def add_point_to_considered(i,j,grid_types):
@@ -79,7 +85,6 @@ def sgn(x):
 def calculete_v(i,j,ii,jj,cum_times,q_times):
     #v = cum_times[jj][ii][0] + abs(q_times[jj, ii] - q_times[j, i])
     v = abs(q_times[jj, ii] - q_times[j, i])
-
     return v,sgn(q_times[j, i] - q_times[jj, ii])
 
 
@@ -191,6 +196,7 @@ def calculete_cum_times(grid_types,cum_times,q_times,Penalty):
             print('cumtimes',cum_times)
 
 #процедура нахождения наискорейшего(с минимальной разницей значений) пути через клетку
+# в итоге не используется
 def fastext_path_through_the_cell(t_ld,t_rd,t_ru,t_lu):
     #t_ld,t_rd,t_ru,t_lu - значения времени максимальной концентрации в углах (левый нижний, правый нижний и т.д. ячейки)
     corners=['ld','rd','ru','lu']
@@ -212,8 +218,8 @@ def fastext_path_through_the_cell(t_ld,t_rd,t_ru,t_lu):
 
     return path,start,finish
 
-
-def draw_trajectory(x0,y0,dx,dy,x_max,y_max,cum_times):
+#процедура рисующая самую длинную траекторию
+def draw_max_trajectory(x0,y0,dx,dy,x_max,y_max,cum_times,clr):
     # нарисуем сетку
     FirstCoordinate = []
     SecondCoordinate = []
@@ -244,9 +250,29 @@ def draw_trajectory(x0,y0,dx,dy,x_max,y_max,cum_times):
         jj = cum_times[j][i][2]
         plt.scatter([i], [j], color='red')
         plt.scatter([ii], [jj], color='green')
-        plt.plot([i, ii], [j, jj])
+        plt.plot([i, ii], [j, jj],color=clr)
+        cum_times[j][i][3]=-1
+        print('cumtimesij',i,j)
         i = int(ii)
         j = int(jj)
+
+
+def select_color(c):
+    if c%5==0:
+        clr='red'
+    if c%5==1:
+        clr='green'
+    if c%5==2:
+        clr='blue'
+    if c % 5 == 3:
+        clr = 'black'
+    if c % 5 == 4:
+        clr = 'gold'
+    return clr
+def draw_trajectory(x0,y0,dx,dy,x_max,y_max,cum_times):
+    for i in range(12):
+        draw_max_trajectory(x0, y0, dx, dy, x_max, y_max, cum_times,select_color(i))
+
 
 
 #для примера
@@ -270,40 +296,32 @@ def main():
 
     #построим сетку из точек сетки
     P=p(X, Y, T)
-    q_times,grid=t_argmax_values(P)
-    q_times[0][1]=1
-    #q_times=
-    print('grid',grid)
-    add_point_to_accepted(1, 0, grid)
-    print('grid', grid)
+    q_times=t_argmax_values(P)
+    n = len(q_times)  # по y
+    m = len(q_times[0])  # x
+    grid=create_far_grid(m,n)#называем все точки сетки 'far'
+
+    #добавим точки, с которых могут начинаться все траектории
+    add_point_to_accepted(0, 4, grid)
+    #add_point_to_accepted(2, 2, grid)
+
     #q_times=np.array([[3,2,1],[5,3,4]])
     print('qtimes',q_times)
-
     #
-    Penalty=3
-    cum_times=np.zeros([len(X),len(X[0]),4])#массив в каждой ячейке хроанится cum_time , номер предыдущей ячейки [1,2]
+    Penalty=1
+    cum_times=np.zeros([len(X),len(X[0]),4])#массив в каждой ячейке хроанится cum_time,
+                                            # номер предыдущей ячейки ( индексы -[1,2])
                                             # и длина траектории с концом в этой точке
     for i in range(len(X)):
         for j in range(len(X[0])):
             cum_times[i][j][1] = -1
-            cum_times[i][j][2] = -1
+            cum_times[i][j][2] = -1#пока ничего не вычислено будем считать будто в каждую точку мы пришли из точки (-1,-1)
 
-
-    print('cumtimes',cum_times)
-
-    #calculete_cum_times(grid, cum_times, q_times, Penalty)
+    #вычислим длины траектории и прочие показатели для каждой точки
     calculete_cum_times(grid, cum_times, q_times, Penalty)
 
     #нарисуем траекторию
     draw_trajectory(x0,y0,dx,dy,x_max,y_max,cum_times)
-
-
-
-    print('ij', i, j)
-
-
-    print('ij',i,j)
-    print('cum_times[i][j][1]',cum_times[1][1][3])
 
 
     plt.show()
